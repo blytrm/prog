@@ -579,3 +579,384 @@ for (nt in c("A", "C", "G", "T")) {
 }
 ```
 ---
+
+## 11. Mortal Fibonacci Rabbits
+
+**Problem**  
+Given: Positive integers `n` and `m`.  
+Return: The total number of rabbit pairs that will remain after the `n`-th month if all rabbits live for `m` months.
+
+**Python**
+
+```python
+def read(path):
+    with open(path, 'r') as f:
+        return [l.strip() for l in f.readlines()]
+
+fi = read('Fibonacci Rabbits (2).txt')
+n, m = map(int, fi[0].split())
+k = 1  # each pair produces 1 new pair
+
+def mortal_rabbits(n, m, k):
+    ages = [0] * m  # age groups: index 0 = newborns
+    ages[0] = 1     # month 1: 1 newborn pair
+    
+    for month in range(1, n):
+        breeders = sum(ages[1:])  # all except newborns
+        newborns = breeders * k
+        ages = [newborns] + ages[:-1]  # shift ages, oldest die
+        
+    return sum(ages)
+
+print(mortal_rabbits(n, m, k))
+```
+
+**R**
+
+```r
+library(gmp)  # for large integers
+
+fi <- readLines('Fibonacci Rabbits (2).txt')
+n <- as.integer(strsplit(fi[1], " ")[[1]][1])
+m <- as.integer(strsplit(fi[1], " ")[[1]][2])
+k <- as.bigz(1)
+
+mortal_rabbits <- function(n, m, k = 1) {
+  ages <- c(as.bigz(1), rep(as.bigz(0), m - 1))
+  
+  for (i in 1:(n - 1)) {
+    newborns <- k * sum(ages[-1])  # sum of all except newborns
+    ages <- c(newborns, ages[-length(ages)])  # newborns + all except oldest
+  }
+  
+  return(sum(ages))
+}
+
+cat(as.character(mortal_rabbits(n, m, k)))
+```
+
+---
+
+## 12. Overlap Graphs
+
+**Problem**  
+Given: A collection of DNA strings in FASTA format (length ≤ 10 kbp).  
+Return: The adjacency list corresponding to O₃ (k=3). You may return edges in any order.
+
+**Python**
+
+```python
+def read_fasta(path):
+    with open(path, 'r') as f:
+        lines = [l.strip() for l in f.readlines()]
+    
+    sequences = {}
+    current_label = ""
+    
+    for line in lines:
+        if line.startswith(">"):
+            current_label = line[1:]
+            sequences[current_label] = ""
+        else:
+            sequences[current_label] += line
+    
+    return sequences
+
+sequences = read_fasta('Overlap Graphs.txt')
+k = 3
+
+for s_label, s_dna in sequences.items():
+    for t_label, t_dna in sequences.items():
+        if s_label != t_label and s_dna[-k:] == t_dna[:k]:
+            print(f"{s_label} {t_label}")
+```
+
+**R (base R)**
+
+```r
+read_fasta <- function(path) {
+  lines <- readLines(path)
+  sequences <- list()
+  current_label <- ""
+  
+  for (line in lines) {
+    if (startsWith(line, ">")) {
+      current_label <- substring(line, 2)
+      sequences[[current_label]] <- ""
+    } else {
+      sequences[[current_label]] <- paste0(sequences[[current_label]], line)
+    }
+  }
+  
+  return(sequences)
+}
+
+sequences <- read_fasta('Overlap Graphs (1).txt')
+k <- 3
+labels <- names(sequences)
+
+for (s_name in labels) {
+  for (t_name in labels) {
+    if (s_name != t_name) {
+      s_dna <- sequences[[s_name]]
+      t_dna <- sequences[[t_name]]
+      
+      suffix <- substr(s_dna, nchar(s_dna) - k + 1, nchar(s_dna))
+      prefix <- substr(t_dna, 1, k)
+      
+      if (suffix == prefix) {
+        cat(s_name, t_name, "\n")
+      }
+    }
+  }
+}
+```
+
+**R (with stringr)**
+
+```r
+library(Biostrings)
+library(stringr)
+
+dna_obj <- readDNAStringSet("Overlap Graphs (1).txt")
+dna_seqs <- as.character(dna_obj)
+k <- 3
+ids <- names(dna_seqs)
+
+for (s in ids) {
+  for (t in ids) {
+    if (s != t && str_sub(dna_seqs[[s]], -k) == str_sub(dna_seqs[[t]], 1, k)) {
+      cat(s, t, "\n")
+    }
+  }
+}
+```
+
+---
+
+## 13. Calculating Expected Offspring
+
+**Problem**  
+Given: Six nonnegative integers corresponding to the number of couples with genotypes:  
+1. AA-AA  
+2. AA-Aa  
+3. AA-aa  
+4. Aa-Aa  
+5. Aa-aa  
+6. aa-aa  
+
+Return: The expected number of offspring displaying the dominant phenotype in the next generation, assuming each couple has exactly two offspring.
+
+**Python (NumPy)**
+
+```python
+import numpy as np
+
+def read_expected(path):
+    with open(path, 'r') as f:
+        data = list(map(int, f.read().split()))
+    
+    couples = np.array(data)
+    probs = [1.0, 1.0, 1.0, 0.75, 0.50, 0.0]
+    offspring_per_couple = 2
+    
+    expected = np.sum(couples * probs * offspring_per_couple)
+    return expected
+
+result = read_expected('Calculating Expected Offspring.txt')
+print(result)
+```
+
+**Python (direct calculation)**
+
+```python
+def calculate_expected_offspring(path):
+    with open(path, 'r') as f:
+        a, b, c, d, e, f = map(int, f.read().split())
+    
+    expected = 2 * (a + b + c) + 1.5 * d + 1.0 * e
+    return expected
+
+print(calculate_expected_offspring('Calculating Expected Offspring.txt'))
+```
+
+**R**
+
+```r
+read_expected <- function(path) {
+  couples <- scan(path, what = integer(), quiet = TRUE)[1:6]
+  probs <- c(1.0, 1.0, 1.0, 0.75, 0.50, 0.0)
+  offspring_per_couple <- 2
+  
+  expected <- sum(couples * probs * offspring_per_couple)
+  return(expected)
+}
+
+result <- read_expected('Calculating Expected Offspring.txt')
+cat(result, "\n")
+```
+
+---
+
+## 14. Finding a Shared Motif
+
+**Problem**  
+Given: A collection of k DNA strings in FASTA format (length ≤ 1 kbp each).  
+Return: A longest common substring of the collection.
+
+**Python**
+
+```python
+def read_fasta(path):
+    sequences = []
+    current_dna = ""
+    
+    with open(path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            
+            if line.startswith(">"):
+                if current_dna:
+                    sequences.append(current_dna)
+                current_dna = ""
+            else:
+                current_dna += line
+        
+        if current_dna:
+            sequences.append(current_dna)
+    
+    return sequences
+
+def longest_common_substring(sequences):
+    if not sequences:
+        return ""
+    
+    reference = min(sequences, key=len)
+    ref_len = len(reference)
+    
+    for window_size in range(ref_len, 0, -1):
+        for start in range(ref_len - window_size + 1):
+            substring = reference[start:start + window_size]
+            if all(substring in seq for seq in sequences):
+                return substring
+    
+    return ""
+
+sequences = read_fasta('Shared Motif LCSM.txt')
+result = longest_common_substring(sequences)
+print(result)
+```
+
+**R**
+
+```r
+read_fasta_manual <- function(path) {
+  lines <- readLines(path)
+  sequences <- character()
+  current_dna <- ""
+  
+  for (line in lines) {
+    line <- trimws(line)
+    if (nchar(line) == 0) next
+    
+    if (startsWith(line, ">")) {
+      if (nchar(current_dna) > 0) {
+        sequences <- c(sequences, current_dna)
+      }
+      current_dna <- ""
+    } else {
+      current_dna <- paste0(current_dna, line)
+    }
+  }
+  
+  if (nchar(current_dna) > 0) {
+    sequences <- c(sequences, current_dna)
+  }
+  
+  return(sequences)
+}
+
+longest_common_substring <- function(seqs) {
+  seqs <- toupper(seqs)
+  idx_min <- which.min(nchar(seqs))
+  ref <- seqs[idx_min]
+  others <- seqs[-idx_min]
+  ref_len <- nchar(ref)
+  
+  for (window_size in ref_len:1) {
+    starts <- 1:(ref_len - window_size + 1)
+    for (start in starts) {
+      sub <- substr(ref, start, start + window_size - 1)
+      if (all(vapply(others, grepl, logical(1), 
+                     pattern = sub, fixed = TRUE))) {
+        return(sub)
+      }
+    }
+  }
+  
+  return("")
+}
+
+sequences <- read_fasta_manual('Shared Motif LCSM (1).txt')
+result <- longest_common_substring(sequences)
+cat(result, "\n")
+```
+
+---
+
+## 15. Independent Alleles
+
+**Problem**  
+Given: Two positive integers k and N.  
+Return: The probability that at least N AaBb organisms will belong to the k-th generation (starting with AaBb in generation 0). Assume each organism always mates with an AaBb organism.
+
+**Python**
+
+```python
+import math
+
+def read_alleles(path):
+    with open(path, 'r') as f:
+        k, n = map(int, f.readline().split())
+    return k, n
+
+k, n = read_alleles('Independent Alleles.txt')
+
+def probability_at_least_n(k, n):
+    m = 2 ** k  # total organisms in k-th generation
+    p = 0.25    # probability of AaBb in offspring
+    q = 1 - p
+    
+    total_prob = 0
+    for i in range(n, m + 1):
+        comb = math.comb(m, i)
+        prob_i = comb * (p ** i) * (q ** (m - i))
+        total_prob += prob_i
+    
+    return total_prob
+
+print(probability_at_least_n(k, n))
+
+# Alternative using scipy
+# from scipy.stats import binom
+# print(binom.sf(n - 1, 2**k, 0.25))
+```
+
+**R**
+
+```r
+data <- readLines('Independent Alleles.txt')
+k <- as.integer(strsplit(data[1], " ")[[1]][1])
+n <- as.integer(strsplit(data[1], " ")[[1]][2])
+
+m <- 2^k
+p <- 0.25
+
+# P(X >= n) = 1 - P(X <= n-1)
+prob <- pbinom(n - 1, size = m, prob = p, lower.tail = FALSE)
+cat(prob, "\n")
+```
+
+---
