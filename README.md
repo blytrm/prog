@@ -1,2 +1,2 @@
-# learning-programming
+# programming
 Code and scripts
