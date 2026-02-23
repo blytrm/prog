@@ -960,3 +960,373 @@ cat(prob, "\n")
 ```
 
 ---
+
+## 16. Finding a Protein Motif
+
+**Problem**  
+Given: At most 15 UniProt Protein Database access IDs.  
+Return: For each protein possessing the N-glycosylation motif, output its given access ID followed by a list of locations in the protein string where the motif can be found.
+
+**Python**
+
+```python
+import requests
+import re
+
+def read(path):
+    with open(path, 'r') as f:
+        return [l.strip() for l in f.readlines()]
+
+pattern = r"(?=N[^P][ST][^P])"  # Lookahead without capturing group
+lines = read("/content/Finding Protein Motif (5).txt")
+
+for line in lines:
+    org_q = line.split('_')[0]
+    url = 'http://www.uniprot.org/uniprotkb/' + org_q + '.fasta'
+    response = requests.get(url)
+    if response.status_code != 200:
+        continue
+    
+    fasta_lines = response.text.strip().split('\n')
+    seq = ''.join(fasta_lines[1:])
+    
+    matches = re.finditer(pattern, seq)
+    pos = [m.start() + 1 for m in matches]  
+    
+    if pos:
+        print(line)
+        print(" ".join(map(str, pos)))
+```
+
+**R**
+
+```r
+library(httr)
+library(stringr)
+
+pattern <- "(?=N[^P][ST][^P])"  
+
+lines <- readLines("/content/Finding Protein Motif (5).txt")
+
+for (line in lines) {
+  org_q <- strsplit(line, "_")[[1]][1]
+
+  url <- paste0("https://rest.uniprot.org/uniprotkb/", org_q, ".fasta")
+  res <- GET(url)
+  if (status_code(res) != 200) next
+
+  fasta_text <- content(res, as = "text", encoding = "UTF-8")
+  fasta_lines <- strsplit(trimws(fasta_text), "\n")[[1]]
+  seq <- paste(fasta_lines[-1], collapse = "")   # drop header
+
+  # str_locate_all returns start/end indices for *each character* of the match
+  # but for lookahead the match is zero-width, so start == end == position *before* N
+  m <- str_locate_all(seq, pattern)[[1]]
+  if (nrow(m) == 0) next
+
+  pos <- m[, "start"] 
+
+  cat(line, "\n")
+  cat(paste(pos, collapse = " "), "\n")
+}
+```
+
+---
+
+## 17. Inferring mRNA from Protein
+
+**Problem**  
+Given: A protein string of length at most 1000 aa.  
+Return: The total number of different RNA strings from which the protein could have been translated, modulo 1,000,000. (Don't neglect the importance of the stop codon in protein translation.)
+
+**Python**
+
+```python
+def read(path):
+    with open(path, 'r') as f:
+        return [l.strip() for l in f.readlines()]
+
+string = read("/content/Inferring mRNA from Protein.txt")
+
+cod = {
+    'A': 4, 'C': 2, 'D': 2, 'E': 2, 'F': 2,
+    'G': 4, 'H': 2, 'I': 3, 'K': 2, 'L': 6,
+    'M': 1, 'N': 2, 'P': 4, 'Q': 2, 'R': 6,
+    'S': 6, 'T': 4, 'V': 4, 'W': 1, 'Y': 2,
+}  # codons for each aa
+
+def count_rna(string, mod=1000000):
+    result = 1
+    protein_sequence = string[0] 
+    for i in protein_sequence:
+        result = (result * cod[i]) % mod
+    result = (result * 3) % mod  # multiply by stop codon possibilities
+    return result
+
+final_result = count_rna(string)
+print(final_result)
+```
+
+**R**
+
+```r
+protein_input <- readLines("/content/Inferring mRNA from Protein.txt")
+
+cod <- c(
+    A=4, C=2, D=2, E=2, F=2,
+    G=4, H=2, I=3, K=2, L=6,
+    M=1, N=2, P=4, Q=2, R=6,
+    S=6, T=4, V=4, W=1, Y=2
+)
+
+count_rna <- function(protein_input_str, mod=1000000) {
+    result <- 1
+    for (aa in strsplit(protein_input_str, "")[[1]]) {
+        result <- (result * cod[aa]) %% mod
+    }
+    result <- (result * 3) %% mod  # multiply by stop codon possibilities
+    return(result)
+}
+
+final <- count_rna(protein_input[1])
+print(final)
+```
+
+---
+
+## 18. Open Reading Frames
+
+**Problem**  
+Given: A DNA string in FASTA format.  
+Return: Every candidate protein string that can be translated from ORFs.
+
+**Python**
+
+```python
+from Bio import SeqIO
+from Bio.Seq import Seq
+from io import StringIO
+
+def read(path):
+    with open(path, 'r') as f:
+        return [l.strip() for l in f.readlines()]
+
+l = read("/content/Open Reading Frames (5).txt")
+content = "\n".join(l)
+
+seq_str = []
+for i in SeqIO.parse(StringIO(content), "fasta"):
+    seq_str.append(str(i.seq))
+
+idna = "".join(seq_str)
+dna = Seq(idna)
+    
+def count_orf(seq):
+    orf = []
+    
+    for i in range(len(seq) - 2):
+        if str(seq[i:i+3]) == "ATG":
+            for j in range(i + 3, len(seq) - 2, 3):
+                stop = ["TAG", "TGA", "TAA"]
+                
+                if str(seq[j:j+3]) in stop:
+                    orf.append(str(Seq(str(seq[i:j])).translate()))
+                    break
+    return orf
+
+p = count_orf(dna)
+rev_p = count_orf(dna.reverse_complement())
+
+final = set(p + rev_p)
+for c in final:
+    print(c)
+```
+
+**R**
+
+```r
+library(Biostrings)
+
+dna_set <- readDNAStringSet("~/Downloads/Open Reading Frames.txt")
+dna <- dna_set[[1]]  # Get the first sequence
+
+find_proteins <- function(sequence) {
+  proteins <- c()
+  seq_str <- as.character(sequence)
+  
+  # Search all 3 frames on this strand
+  for (i in 1:(nchar(seq_str) - 2)) {
+    # Look for Start Codon (ATG)
+    if (substr(seq_str, i, i + 2) == "ATG") {
+      # Translate from this start point to the end of the sequence
+      aa_seq <- as.character(translate(DNAString(substr(seq_str, i, nchar(seq_str)))))
+      
+      # If there is a stop codon (marked by *), extract until the first *
+      if (grepl("\\*", aa_seq)) {
+        protein <- sub("\\*.*", "", aa_seq)
+        proteins <- c(proteins, protein)
+      }
+    }
+  }
+  return(proteins)
+}
+
+forward_prots <- find_proteins(dna)
+reverse_prots <- find_proteins(reverseComplement(dna))
+
+final_prots <- unique(c(forward_prots, reverse_prots))
+cat(final_prots, sep = "\n")
+```
+
+---
+
+## 19. Enumerating Gene Orders
+
+**Problem**  
+Given: A positive integer n < 8.  
+Return: The total number of permutations of length n, and a list of all such permutations.
+
+**Python**
+
+```python
+import math
+import itertools
+
+with open("Enumerating Gene Orders.txt", 'r') as f:
+    n = int(f.read().strip())
+
+def get_perm(n):
+    elements = list(range(1, n + 1))
+    perms = list(itertools.permutations(elements))
+    print(len(perms))
+    for p in perms:
+        print(*(p))
+        # * = splat operator = unpacking
+        # print(p) = (1, 2, 3)
+        # print(*p) = 1 2 3
+
+get_perm(n)
+```
+
+**R**
+
+```r
+library(gtools)
+
+n <- as.integer(readLines("path", n = 1)) # single integer
+cat(factorial(n), "\n")
+perms <- permutations(n = n, r = n, v = 1:n)
+write.table(perms, col.names = FALSE, row.names = FALSE)
+```
+
+---
+
+## 20. Calculating Protein Mass
+
+**Problem**  
+Given: A protein string of amino acids.  
+Return: The weight of the protein.
+
+**Python**
+
+```python
+def read(file):
+    with open(file, 'r') as f:
+        return f.read().strip()
+
+def weight(string, weight_table):
+    return sum(weight_table[aa] for aa in string)
+
+def main():
+    file = "/content/Protein Mass Calculation.txt"
+    string = read(file)
+    
+    amino_acid_masses = {
+        'A': 71.03711, 'C': 103.00919, 'D': 115.02694, 'E': 129.04259, 
+        'F': 147.06841, 'G': 57.02146, 'H': 137.05891, 'I': 113.08406, 
+        'K': 128.09496, 'L': 113.08406, 'M': 131.04049, 'N': 114.04293, 
+        'P': 97.05276, 'Q': 128.05858, 'R': 156.10111, 'S': 87.03203, 
+        'T': 101.04768, 'V': 99.06841, 'W': 186.07931, 'Y': 163.06333
+    }
+    
+    result = weight(string, amino_acid_masses)
+    
+    print(result)
+
+if __name__ == "__main__":
+    main()
+```
+
+**R**
+
+```r
+protein_str <- readLines("~/Downloads/Protein Mass Calculation.txt", warn = FALSE)
+
+mass_table <- c(
+  A = 71.03711, C = 103.00919, D = 115.02694, E = 129.04259, 
+  F = 147.06841, G = 57.02146, H = 137.05891, I = 113.08406, 
+  K = 128.09496, L = 113.08406, M = 131.04049, N = 114.04293, 
+  P = 97.05276, Q = 128.05858, R = 156.10111, S = 87.03203, 
+  T = 101.04768, V = 99.06841, W = 186.07931, Y = 163.06333
+)
+
+amino_acids <- strsplit(protein_str, "")[[1]]
+total_mass <- sum(mass_table[amino_acids])
+cat(round(total_mass, 3), "\n")
+```
+
+---
+
+## 21. Locating Restriction Sites
+
+**Problem**  
+Given: A DNA string in FASTA format.  
+Return: The position and length of every reverse palindrome in the string with length between 4 & 12.
+
+**Python**
+
+```python
+def restriction_enzymes(file):
+    with open(file, 'r') as f:
+        dna = "".join(f.read().splitlines()[1:])
+    
+    trans = str.maketrans("ATGC", "TACG")
+    results = []
+    
+    for i in range(len(dna)):
+        for j in range(4, 13):
+            if i + j > len(dna):
+                break
+            
+            substring = dna[i:i+j]
+            rev_comp = substring[::-1].translate(trans)
+            
+            if substring == rev_comp:
+                results.append((i + 1, j))
+    return results
+      
+for position, length in restriction_enzymes("/content/Restriction Sites Revp.txt"):
+    print(f"{position} {length}")
+```
+
+**R**
+
+```r
+library(Biostrings)
+
+restriction_enzymes <- function(file) {
+    dna <- readDNAStringSet(file)[[1]]
+    palindromes <- findPalindromes(dna, min.armlength = 2, max.looplength = 0, max.mismatch = 0)
+    palindromes <- palindromes[width(palindromes) <= 12]
+    results <- data.frame(
+        position = start(palindromes),
+        length = width(palindromes)
+    )
+    return(results)
+}
+
+results <- restriction_enzymes("~/Downloads/Restriction Sites Revp.txt")
+cat(paste(results$position, results$length, collapse = "\n"))
+```
+
+---
