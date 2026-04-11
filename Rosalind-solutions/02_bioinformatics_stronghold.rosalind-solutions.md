@@ -1329,4 +1329,492 @@ results <- restriction_enzymes("~/Downloads/Restriction Sites Revp.txt")
 cat(paste(results$position, results$length, collapse = "\n"))
 ```
 
+I'll add your new solutions to the document in the same format. Let me organize them properly.
+ Now I'll create the complete updated document with all your new solutions added in the proper format. Let me compile this:
+ Now I have enough information. Let me create the complete updated document with all your new solutions added in the proper Rosalind format. I'll compile this as a comprehensive response:
+
+Based on your solutions and the established format, here are your new Rosalind solutions **22-31** added to the document:
+
 ---
+
+## 22. RNA Splicing
+
+**Problem**  
+Given: A DNA string `s` (of length at most 1 kbp) and a collection of substrings of `s` acting as introns. All strings are given in FASTA format.  
+Return: A protein string resulting from transcribing and translating the exons of `s`. 
+
+**Python**
+
+```python
+from Bio import SeqIO
+from Bio.Seq import Seq
+import re
+
+def readfasta(file):
+    records = list(SeqIO.parse(file, "fasta"))
+    dna_string = str(records[0].seq)
+    intron_list = [str(r.seq) for r in records[1:]]
+    return dna_string, intron_list
+
+dna, introns = readfasta("/content/RNA Splicing (2).txt")
+
+pattern = "|".join(map(re.escape, introns))
+spliced_dna = re.sub(pattern, "", dna)
+
+protein = Seq(spliced_dna).translate(to_stop=True)
+print(protein)
+```
+
+**R**
+
+```r
+library(Biostrings)
+library(stringr)
+
+fasta <- readDNAStringSet("~/Downloads/RNA Splicing (2).txt")
+dna <- as.character(fasta[1])
+introns <- as.character(fasta[-1])
+
+for(intron in introns) {
+  dna <- gsub(intron, "", dna, fixed = TRUE)
+}
+
+protein <- translate(DNAString(dna))
+cat(as.character(protein))
+```
+
+---
+
+## 23. Enumerating k-mers Lexicographically
+
+**Problem**  
+Given: A collection of at most 10 symbols defining an ordered alphabet, and a positive integer `n` (≤ 4).  
+Return: All strings of length `n` that can be formed from the alphabet, ordered lexicographically. 
+
+**Python**
+
+```python
+from itertools import product
+
+s = ["A", "B", "C", "D", "E"]
+n = 4
+
+comb = [''.join(i) for i in product(s, repeat=n)]
+sorted_comb = sorted(comb)
+print(*sorted_comb, sep='\n')
+```
+
+**R**
+
+```r
+s <- c("A", "B", "C", "D", "E")
+n <- 4
+
+grid <- expand.grid(rep(list(s), n))
+comb <- do.call(paste0, grid)
+sorted_comb <- sort(comb)
+cat(sorted_comb, sep = "\n")
+```
+
+---
+
+## 24. Longest Increasing Subsequence
+
+**Problem**  
+Given: A positive integer `n` (≤ 10,000) followed by a permutation `π` of length `n`.  
+Return: A longest increasing subsequence of `π`, followed by a longest decreasing subsequence of `π`. 
+
+**Python**
+
+```python
+from bisect import bisect_left
+
+def read(file):
+    with open(file, 'r') as f:
+        line1 = f.readline().strip()
+        n = int(line1)
+        permut = [int(x) for x in f.read().split()]
+        return n, permut
+
+def perm_sub(arr, increasing=True):
+    n = len(arr)
+    tails = []
+    tail_idx = []
+    prev = [-1] * n
+    
+    for i, x in enumerate(arr):
+        val = x if increasing else -x
+        pos = bisect_left(tails, val)
+        
+        if pos > 0:
+            prev[i] = tail_idx[pos - 1]
+        
+        if pos == len(tails):
+            tails.append(val)
+            tail_idx.append(i)
+        else:
+            tails[pos] = val
+            tail_idx[pos] = i
+    
+    result, curr = [], tail_idx[-1]
+    while curr != -1:
+        result.append(arr[curr])
+        curr = prev[curr]
+    return result[::-1]
+
+n, permut = read("/content/Longest Increasing Subsequence (4).txt")
+
+LIS = perm_sub(permut, increasing=True)
+LDS = perm_sub(permut, increasing=False)
+
+print(*LIS)
+print(*LDS)
+```
+
+---
+
+## 25. Genome Assembly as Shortest Superstring
+
+**Problem**  
+Given: At most 50 DNA strings of approximately equal length (≤ 1 kbp) in FASTA format representing reads from a single linear chromosome.  
+Return: A shortest superstring containing all the given strings (reconstructed chromosome). 
+
+**Python**
+
+```python
+from Bio import SeqIO
+from Bio.Seq import Seq
+
+def get_overlap(s1, s2, min_overlap_required):
+    """Return overlap length where s1's suffix matches s2's prefix."""
+    for i in range(min(len(s1), len(s2)), min_overlap_required - 1, -1):
+        if s1.endswith(s2[:i]):
+            return i
+    return 0
+
+def assemble_genome(reads):
+    """Greedy assembly merging pairs with maximum overlap."""
+    reads = reads.copy()
+    min_overlap_required = min(len(r) for r in reads) // 2 + 1
+
+    while len(reads) > 1:
+        best_overlap = 0
+        best_i, best_j = 0, 0
+
+        for i in range(len(reads)):
+            for j in range(len(reads)):
+                if i == j:
+                    continue
+                overlap = get_overlap(reads[i], reads[j], min_overlap_required)
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    best_i, best_j = i, j
+
+        if best_overlap == 0:
+            raise ValueError(f"No overlap found among {len(reads)} remaining reads")
+
+        merged = reads[best_i] + reads[best_j][best_overlap:]
+        
+        if best_i > best_j:
+            reads.pop(best_i)
+            reads.pop(best_j)
+        else:
+            reads.pop(best_j)
+            reads.pop(best_i)
+        reads.append(merged)
+    
+    return reads[0]
+
+def read_reads(file):
+    return [str(record.seq) for record in SeqIO.parse(file, "fasta")]
+
+def main():
+    file = "/Users/billytrim/Downloads/Genome Assembly Shortest Superstring (1).txt"
+    reads = read_reads(file)
+    result = assemble_genome(reads)
+    print(result)
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## 26. Perfect Matchings and RNA Secondary Structures
+
+**Problem**  
+Given: An RNA string `s` (≤ 80 bp) with equal A/U and C/G counts.  
+Return: The total possible number of perfect matchings of basepair edges in the bonding graph of `s`. 
+
+**Python**
+
+```python
+from Bio import SeqIO
+from Bio.Seq import Seq
+
+rna = [str(record.seq) for record in SeqIO.parse("/content/Perfect Matchings RNA Structures (3).txt", "fasta")]
+
+def perf_match(rna):
+    n_au = rna.count('A')
+    n_gc = rna.count('G')
+    
+    def fact(n):
+        if n <= 1:
+            return 1
+        result = 1
+        for i in range(2, n + 1):
+            result *= i
+        return result
+    
+    return fact(n_au) * fact(n_gc)
+
+for r in rna:
+    print(perf_match(r))
+```
+
+---
+
+## 27. Partial Permutations
+
+**Problem**  
+Given: Positive integers `n` and `k` (100 ≥ n > 0, 10 ≥ k > 0).  
+Return: The total number of partial permutations P(n, k), modulo 1,000,000. 
+
+**Python**
+
+```python
+with open("/Users/billytrim/Desktop/2026/learning/rosalind/Partial Permutations.txt", 'r') as file:
+    n, k = map(int, file.read().split())
+
+def partial_perm(n, k, mod=1000000):
+    result = 1
+    for i in range(n, n - k, -1):
+        result = (result * i) % mod
+    return result
+
+print(partial_perm(n, k))
+```
+
+---
+
+## 28. Introduction to Random Strings
+
+**Problem**  
+Given: A DNA string `s` (≤ 100 bp) and an array `A` of at most 20 numbers between 0 and 1.  
+Return: An array `B` where B[k] represents the common logarithm of the probability that a random string with GC-content A[k] matches `s`. 
+
+**Python**
+
+```python
+import math
+
+def dnamatch(string, probabilities):
+    A_count = string.count("A")
+    T_count = string.count("T")
+    G_count = string.count("G")
+    C_count = string.count("C")
+    
+    result = []
+    for comp in probabilities:
+        G_cont = comp / 2
+        C_cont = comp / 2
+        A_cont = (1 - comp) / 2
+        T_cont = (1 - comp) / 2
+        
+        prob_product = ((A_cont)**A_count) * ((T_cont)**T_count) * ((G_cont)**G_count) * ((C_cont)**C_count)
+        prob_match = math.log10(prob_product)
+        result.append(round(prob_match, 3))
+    
+    return result
+
+def readin(file):
+    with open(file, 'r') as f:
+        content = f.readlines()
+        dna = str(content[0].strip())
+        gc_content = [float(x) for x in content[1].split()]
+    return dna, gc_content
+
+def main():
+    file = "/Users/billytrim/Downloads/Introduction to Random Strings (1).txt"
+    string, probabilities = readin(file)
+    answ = dnamatch(string, probabilities)
+    print(*answ)
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## 29. Enumerating Oriented Gene Orderings
+
+**Problem**  
+Given: A positive integer `n` ≤ 6.  
+Return: The total number of signed permutations of length `n`, followed by a list of all such permutations. 
+
+**Python**
+
+```python
+class Solution:
+    def __init__(self):
+        self.n = None
+    
+    def read(self, file):
+        with open(file, 'r') as f:
+            self.n = int(f.read().strip())
+        return self.n
+            
+    def factorial(self):
+        if self.n is None:
+            return None
+        ni = self.n
+        res = 1
+        while ni > 1:
+            res = ni * res
+            ni -= 1
+        return res
+            
+    def sign_perm(self):           
+        stack = []
+        output = []
+        used = set()
+
+        def backtrack():
+            if len(stack) == self.n:
+                output.append(stack.copy())
+                return
+            for i in range(1, self.n + 1):
+                if i not in used:
+                    used.add(i)
+                    stack.append(i)
+                    backtrack()
+                    stack.pop()
+                    stack.append(-i)
+                    backtrack()
+                    stack.pop()
+                    used.remove(i)
+        backtrack()
+        return output
+
+sol = Solution()
+file = "/Users/billytrim/Downloads/Enumerating Oriented Gene Orderings (1).txt"
+n = sol.read(file)
+exp_total = (2 ** n) * sol.factorial()
+
+result = sol.sign_perm()
+act_total = len(result)
+
+if act_total == exp_total:
+    print(len(result))
+    for perm in result:
+        print(*perm)
+else:
+    print(f"count mismatch: exp = {exp_total}; act = {act_total}")
+```
+
+---
+
+## 30. Finding a Spliced Motif
+
+**Problem**  
+Given: Two DNA strings `s` and `t` in FASTA format.  
+Return: One collection of indices of `s` in which the symbols of `t` appear as a subsequence of `s`.
+
+**Python**
+
+```python
+from Bio import SeqIO
+
+def subseq(s, t):
+    res = []
+    tx = 0
+    for sx, nt in enumerate(s):
+        if tx < len(t) and nt == t[tx]:
+            res.append(sx + 1)
+            tx += 1
+            if tx == len(t):
+                break
+    return res if len(res) == len(t) else []
+
+def readin(file):
+    return [str(record.seq) for record in SeqIO.parse(file, "fasta")]
+
+def main():
+    file = "/Users/billytrim/Downloads/Finding a Spliced Motif (1).txt"
+    lin = readin(file)
+    s = lin[0]
+    t = lin[1]
+    print(*subseq(s, t))
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## 31. Transitions and Transversions
+
+**Problem**  
+Given: Two DNA strings `s1` and `s2` of equal length.  
+Return: The transition/transversion ratio R(s1, s2).
+
+**Python**
+
+```python
+from Bio import SeqIO
+
+class Solution:
+    def __init__(self):
+        pass
+
+    def is_transition(self, a, b):
+        purines = "AG"
+        pyrimidines = "CT"
+        if a == b:
+            return False
+        if (a in purines and b in purines):
+            return True
+        if (a in pyrimidines and b in pyrimidines):
+            return True
+        return False
+  
+    def count(self, s1, s2, pos=0, transi=0, transv=0):
+        if pos >= len(s1):
+            return transi, transv
+    
+        a, b = s1[pos], s2[pos]
+        if a != b:
+            if self.is_transition(a, b):
+                transi += 1
+            else:
+                transv += 1
+        return self.count(s1, s2, pos + 1, transi, transv)
+  
+    def tt_ratio(self, s1, s2):
+        transi, transv = self.count(s1, s2)
+        print(f"transitions = {transi}")
+        print(f"transversions = {transv}")
+        if transv == 0:
+            return float('inf')
+        result = transi / transv
+        print(f"{result:.11f}")
+        return result
+
+def main():
+    def readin(file):
+        return [str(record.seq) for record in SeqIO.parse(file, "fasta")]
+    
+    file = "/content/Transitions and Transversions.txt"
+    reads = readin(file)
+    string1 = reads[0]
+    string2 = reads[1]
+    sol = Solution()
+    sol.tt_ratio(string1, string2)
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+
