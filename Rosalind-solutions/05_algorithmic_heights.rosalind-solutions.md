@@ -133,3 +133,70 @@ main()
 ```
 
 ---
+
+## 3. Degree Array
+
+**Problem**
+Given: undirected/simple graph with n vertices in edge list format
+Return: an array D[1..n] where D[i] is the degree of vertex i
+- in simple graph, degree d(u) of vertex u = # of neighbours u has = # number of edges incident upon it
+
+**Python**
+
+```python
+
+def degree_array(data):
+    lines = data.strip().split('\n')
+    n, m = map(int, lines[0].split())
+
+    degrees = [0] * (n + 1)
+
+    for line in lines[1:]:
+        u, v = map(int, line.split())
+        degrees[u] += 1
+        degrees[v] += 1
+    return " ".join(map(str, degrees[1:]))
+
+file_path = "/Users/billytrim/Desktop/2026/learning/rosalind/Degree Array.txt"
+with open(file_path, 'r') as f:
+    data = f.read()
+print(degree_array(data))
+
+# or w OOP
+class Graph:
+    def __init__(self, file_path):
+        self.n = 0
+        self.m = 0
+        self.edges = []
+        self._load_data(file_path)
+
+    def _load_data(self, file_path):
+        """Reads the file and parses the number of vertices/edges."""
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+            
+        # Parse the first line for n and m
+        self.n, self.m = map(int, lines[0].split())
+        
+        # Store edges as a list of tuples
+        for line in lines[1:]:
+            if line.strip():
+                u, v = map(int, line.split())
+                self.edges.append((u, v))
+
+    def get_degree_array(self):
+        """Calculates the degree for each vertex."""
+        # Initialize degree array with zeros (n+1 for 1-based indexing)
+        degrees = [0] * (self.n + 1)
+        
+        for u, v in self.edges:
+            degrees[u] += 1
+            degrees[v] += 1
+            
+        # Return as a space-separated string (skipping index 0)
+        return " ".join(map(str, degrees[1:]))
+
+path = "/Users/billytrim/Desktop/2026/learning/rosalind/Degree Array.txt"
+my_graph = Graph(path)
+print(my_graph.get_degree_array())
+```
