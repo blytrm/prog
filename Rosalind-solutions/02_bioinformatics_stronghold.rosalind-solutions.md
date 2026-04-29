@@ -1876,6 +1876,53 @@ def count(rna):
     return memo[rna]
 print(count(l))
 ```
+---
 
+## 34. Error Correction in Reads
 
+**Problem**
+Given: A collection of reads in FASTA format
+Return: A list of all corrections ([old] -> [new])
 
+- _for each read 's': 1 of the following applies_
+    - _s was correctly sequenced and appears twice (possibly as reverse complement)_
+    - _s is incorrect, and is in data once; hamming distance = 1 with respect to 1 read in the dataset (or its reverse complement)_
+
+```python
+from Bio import SeqIO
+from collections import Counter
+
+def read_reads(file):
+  return [str(record.seq) for record in SeqIO.parse(file, "fasta")]
+
+def hamming_distance(x, y):
+  return sum(x != y for x, y in zip(x, y))
+
+def rev_comp(s):
+    trans = str.maketrans("ACGT", "TGCA")
+    rc = s[::-1].translate(trans)
+    return rc
+
+def main():
+  reads = read_reads("/content/Rosalind Correlation.txt")
+
+  # count correct
+  counts = Counter(reads)
+  # check correct = >= 2x or >= 2x (with rev'comp')
+  correct = {
+    s for s in counts if (counts[s] + counts[rev_comp(s)] >= 2 if s != rev_comp(s) else counts[s] >= 2)
+    }
+  # add rev'comp's to set
+  correct |= {rev_comp(s) for s in correct}
+
+# correction
+  for s in reads:
+    if s not in correct:
+      for c in correct:
+        if hamming_distance(s, c) == 1:
+          print(f"{s}->{c}")
+          break
+
+if __name__ == "__main__":
+  main()
+```
