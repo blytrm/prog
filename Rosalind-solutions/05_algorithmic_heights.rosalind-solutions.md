@@ -200,3 +200,45 @@ path = "/Users/billytrim/Desktop/2026/learning/rosalind/Degree Array.txt"
 my_graph = Graph(path)
 print(my_graph.get_degree_array())
 ```
+---
+
+## 4. Insertion Sort
+
+**Problem**
+Given: A positive integer 'n' (<10^3) and an array A[1..n] of ints
+Return: the number of swaps performed by insertion sort algorithm
+**Python**
+```python
+def readin(path):
+    with open(path, 'r') as f:
+        lines = [line.strip() for line in f.readlines()]
+        return lines
+l = readin("./bin/rosalind_ins.txt")
+a_len = int(l[0])
+arry = [int(x) for x in l[1].split()]
+# or
+    # arry = list(map(int, l[1].split())
+print(a_len)
+def insertionsort(arr):
+    swaps = 0
+    for i in range(1, len(arr)):
+        key = arr[i] # start @ 2nd ; because indx 0 already sorted
+        j = i - 1 # j = indx of item left of key
+        # compare key with elements to left
+        # move elements > key right 1 position
+        while j >= 0 and arr[j] > key:
+            # 1) ensure index > 0
+            # 2) left item > right item
+            arr[j + 1] = arr[j]
+            # move j right 1
+            j -= 1
+            swaps += 1
+            # move pointer left
+        arr[j + 1] = key
+        # loop stops when no smaller number than j
+    return swaps, arr
+result = insertionsort(arry)
+print(result)
+```
+---
+
