@@ -671,7 +671,7 @@ for s_label, s_dna in sequences.items():
             print(f"{s_label} {t_label}")
 ```
 
-**R (base R)**
+**R**
 
 ```r
 read_fasta <- function(path) {
@@ -1840,5 +1840,42 @@ def read_total_nodes(file):
 print(read_total_nodes("/content/Completing a Tree (3).txt"))
 ```
 ---
+
+## 33. Catalan Numbers and RNA Secondary Structures
+
+**Problem**
+Given: An RNA string 's' ; having the same number of occurrences of 'A' as 'U' and the same number of occurrences of 'C' as 'G'. The length of the string is at most 300 bp.
+Return: Total number of noncrossing perfect matchings of basepair edges in the bonding graph of 's', modulo 1M
+```python
+def readin(file):
+    with open(file, 'r') as f:
+        lines = f.readlines()
+        l = ''.join(line.strip() for line in lines[1:])
+        return l
+l = readin("rosalind_cat (2).txt")
+print(l)
+
+pairs = {'A': 'U', 'U': 'A', 'C': 'G', 'G': 'C'}
+memo = {}
+
+def count(rna):
+    if rna in memo:
+        return memo[rna]
+    if len(rna) == 0:
+        return 1
+
+    total = 0
+    first = rna[0]
+    target = pairs[first]
+
+    for i in range(1, len(rna), 2):
+        if rna[i] == target:
+            total += count(rna[1:i]) * count(rna[i+1:])
+
+    memo[rna] = total % 1000000
+    return memo[rna]
+print(count(l))
+```
+
 
 
