@@ -1817,4 +1817,28 @@ if __name__ == "__main__":
 
 ---
 
+## 32. Completing a Tree
+
+**Problem**
+Given: a positive integer n (n≤1000 ) and an adjacency list corresponding to a graph on n nodes that contains no cycles
+Return: the minimum number of edges that can be added to the graph to produce a tree
+
+**Python**
+
+```python
+def read_total_nodes(file):
+  with open(file, 'r') as f:
+    lines = f.readlines()
+    n = int(lines[0])
+  # spanning tree requires (n-1) edges:
+    # as every parent node except the root must have a parent
+    # >(n-1) will produce cycles
+    # <(n-1) will produce unconnected tree
+    edges = len(lines[1:])
+    additional_edges = (n -1) - edges
+    return edges, n, additional_edges
+print(read_total_nodes("/content/Completing a Tree (3).txt"))
+```
+---
+
 
