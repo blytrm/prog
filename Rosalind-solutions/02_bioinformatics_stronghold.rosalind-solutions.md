@@ -1926,3 +1926,156 @@ def main():
 if __name__ == "__main__":
   main()
 ```
+
+---
+
+## 36. K-mer Composition
+
+**Problem**
+Given: A DNA string in FASTA format
+Return: The 4-mer composition of the string (count of each possible 4-mer, ordered lexicographically by the encoding A=0, C=1, G=2, T=3)
+
+```python
+from Bio import SeqIO
+
+def kmer(dna):
+    nucleotide_map = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
+    counts = [0] * 256
+    for i in range(len(dna) - 3):
+        a = nucleotide_map[dna[i]]
+        b = nucleotide_map[dna[i + 1]]
+        c = nucleotide_map[dna[i + 2]]
+        d = nucleotide_map[dna[i + 3]]
+        code = a * 64 + b * 16 + c * 4 + d
+        counts[code] += 1
+    return " ".join(map(str, counts))
+
+def main():
+    file = "/content/Kmer Composition (1).txt"
+    data = [str(record.seq) for record in SeqIO.parse(file, "fasta")]
+    print(kmer(data[0]))
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## 37. Speeding Up Motif Finding (KMP Failure Array)
+
+**Problem**
+Given: A DNA string in FASTA format
+Return: The failure array of s, where P[k] is the length of the longest proper prefix of s[1:k] that is also a suffix
+
+```python
+from Bio import SeqIO
+
+def build_failure_array(pat):
+    len_ = 0
+    m = len(pat)
+    lps = [0] * m
+    i = 1
+    while i < m:
+        if pat[i] == pat[len_]:
+            len_ += 1
+            lps[i] = len_
+            i += 1
+        else:
+            if len_ != 0:
+                len_ = lps[len_ - 1]
+            else:
+                lps[i] = 0
+                i += 1
+    return lps
+
+def main():
+    file = "/content/Motif Finding KMP.txt"
+    r = [str(rec.seq) for rec in SeqIO.parse(file, "fasta")]
+    pat = r[0]
+    failure_array = build_failure_array(pat)
+    print(' '.join(map(str, failure_array)))
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## 38. Finding a Shared Spliced Motif (Longest Common Subsequence)
+
+**Problem**
+Given: Two DNA strings s and t (each having length at most 1 kbp) in FASTA format
+Return: A longest common subsequence of s and t (if more than one solution exists, any one is acceptable)
+
+```python
+from Bio import SeqIO
+
+def find_lcs(file):
+    s, t = [str(rec.seq) for rec in SeqIO.parse(file, "fasta")]
+    m, n = len(s), len(t)
+    
+    # Build DP matrix to store max LCS length
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if s[i - 1] == t[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    
+    # Backtrack to reconstruct LCS
+    lcs = []
+    i, j = m, n
+    while i > 0 and j > 0:
+        if s[i - 1] == t[j - 1]:
+            lcs.append(s[i - 1])
+            i -= 1
+            j -= 1
+        elif dp[i - 1][j] >= dp[i][j - 1]:
+            i -= 1
+        else:
+            j -= 1
+    
+    return "".join(reversed(lcs))
+
+def main():
+    print(find_lcs("/content/rosalind_lcsq.txt"))
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## 39. Ordering Strings of Varying Length Lexicographically
+
+**Problem**
+Given: A permutation (ordered alphabet symbols) and a positive integer n
+Return: All strings of length at most n, ordered lexicographically (alphabet order based on symbol order given)
+
+```python
+def extend_strings(alphabet, n, current):
+    if len(current) == n:
+        return [current]
+    result = [current]
+    for ch in alphabet:
+        result.extend(extend_strings(alphabet, n, current + ch))
+    return result
+
+def enumerate_str(alphabet, n):
+    return extend_strings(alphabet, n, "")
+
+def main():
+    _file = "/content/Lexicographic String Order (2).txt"
+    with open(_file, 'r') as f:
+        alphabet = f.readline().split()
+        n = int(f.readline().strip())
+
+    result = "\n".join(enumerate_str(alphabet, n))
+    print(result)
+
+if __name__ == "__main__":
+    main()
+```
+
